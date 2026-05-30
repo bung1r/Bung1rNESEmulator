@@ -32,7 +32,9 @@ public class Bus
     public Bus()
     {
         cpu = new CPU();
+        cpu.ConnectBus(this);
         ClearRAM();
+        
     }
 }
 
