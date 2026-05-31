@@ -47,12 +47,12 @@ public class CPU
     this makes it a little easier to conceptualize each component reading/writing, 
     rather than the bus doing all the work, persay 
     */
-    byte read(UInt16 address, bool bReadOnly = false)
+    byte read(ushort address, bool bReadOnly = false)
     {
         return bus.read(address, bReadOnly); // read from the bus
     }
 
-    void write(UInt16 address, byte data)
+    void write(ushort address, byte data)
     {
         bus.write(address, data); 
     }
@@ -61,19 +61,33 @@ public class CPU
     {
         if (value)
         {
-            Status |= (byte)flag; // sets flag bit to 1 (? | 1 == 1)
+            SR |= (byte)flag; // sets flag bit to 1 (? | 1 == 1)
         } else
         {
-            Status &= (byte)~flag; // set flag bit to 0 (? & 0 == 0)
+            SR &= (byte)~flag; // set flag bit to 0 (? & 0 == 0)
         }
     }
     byte GetFlag(StatusFlag flag)
     {
-        if (Status & (byte)flag == 0) return 0;
+        if (SR & (byte)flag == 0) return 0;
         return 1;
     }
+    byte GetStatus()
+    {
+        return SR;
+    }
+    
+    void Push(byte value)
+    {
+        write((ushort)(0x0100 + SP), value);
+        SP--;
+    }
 
-
+    byte Pull()
+    {
+        SP++;
+        return read((ushort)(0x0100 + SP));
+    }
     /*
     COPIED FROM THE 6502 Instruction Set at https://www.masswerk.at/6502/6502_instruction_set.html
     
@@ -96,9 +110,46 @@ public class CPU
     */
 
     // list of address modes
-    byte acc(); byte abs(); byte abX(); byte abY(); 
+    byte acc(); 
+    byte abs() 
+    {
+        ushort low = read(PC);
+        PC++;
+        ushort high = read(PC);
+        PC++;
+
+        addrAbs = (ushort)(high << 8 | low);
+        return 0;
+    } // combine because can only read 1 byte at a time, but the address is 2 bytes.
+    byte abX()
+    {
+        ushort low = read(PC);
+        PC++;
+        ushort high = read(PC);
+        PC++;
+
+        addrAbs = (ushort)(high << 8 | low);
+        addrAbs + X;
+
+        if (abbrAbs & 0xFF00 != high << 8) return 1; // if high byte different after adding X (page switch)
+        return 0;
+    }
+    byte abY()
+    {
+        ushort low = read(PC);
+        PC++;
+        ushort high = read(PC);
+        PC++;
+
+        addrAbs = (ushort)(high << 8 | low);
+        addrAbs + Y;
+
+        if (abbrAbs & 0xFF00 != high << 8) return 1; // if high byte different after adding X (page switch)
+        return 0;
+    } 
     byte imm()
     {
+        addrAbs = PC++;
         return 0;
     } 
     byte imp()
@@ -106,27 +157,247 @@ public class CPU
         fetched = A;
         return 0;
     }
-    
-    byte ind(); byte inX(); 
-    byte inY(); byte rel(); byte zpg(); byte zpX(); 
-    byte zpY();
+    byte ind() // to make this as similar to the NES system, implement the page overflow bug too
+    {
+        byte ptrLow = read(PC);
+        PC++;
+        byte ptrHigh = read(PC);
+        PC++;
+        ushort pointer = (ushort)(ptrHigh << 8 | ptrLow);
+
+        ushort low = read(pointer);
+        ushort high;
+
+        if ((pointer & 0x00FF) == 0x00FF)
+        {
+            high = read((ushort)(pointer & 0xFF00));
+        } else
+        {
+            high = read((ushort)(pointer + 1));
+        }
+
+        addrAbs = (ushort)(high << 8 | low);
+        return 0;
+    }
+    byte inX()
+    {
+        byte zpAddr = read(PC);
+        PC++;
+        byte ptr = (byte)(zpAddr + X); // add X to the low byte, but wrap around if it goes over 0xFF
+        
+        byte low = read(ptr);
+        byte high = read((byte)(ptr + 1));
+        addrAbs = (ushort)(high << 8 | low);
+        return 0;
+    } 
+    byte inY()
+    {
+        byte zpAddr = read(PC);
+        PC++;
+        byte ptr = (byte)(zpAddr);
+
+        ushort baseAddr = (ushort)(read(ptr) | (read((byte)(ptr + 1)) << 8));
+        addrAbs = (ushort)(baseAddr + Y);
+        return 0;
+    } 
+    byte rel()
+    {
+        addr_rel = read(PC);
+        PC++;
+        if (addrRel & 0x80) addrRel |= 0xFF00; // if the value is negative, sign extend it to 16 bits by setting the high byte to 0xFF
+        return 0;
+    }
+    byte zpg()
+    {
+        addrAbs = read(PC);
+        PC++;
+        addrAbs &= 0x00FF;
+        return 0;
+    } 
+    byte zpX()
+    {
+        addrAbs = read(PC) + X;
+        PC++;
+        addrAbs &= 0x00FF;
+        return 0;
+    } 
+    byte zpY()
+    {
+        addrAbs = read(PC) + Y;
+        PC++;
+        addrAbs &= 0x00FF;
+        return 0;
+    }
 
     byte XXX(); // all illegal opcodes, might implement some useful ones later. 
 
     // all 56 operates in alphabetical order. yay!
-    byte ADC(); // add with carry
-    byte AND(); // and (with accumulator)
-    byte ASL(); // arith shft left
-    byte BCC(); // branch on carry clear
-    byte BCS(); // branch on carry set 
-    byte BEQ(); // branch on equal
-    byte BIT(); // bit test
-    byte BMI(); // branch on minus (negative set)
-    byte BNE(); // branch on not equal (zero clear)
-    byte BPL(); // branch on plus (negative clear)
-    byte BRK(); // break / interrupt
-    byte BVC(); // branch on overflow clear
-    byte BVS(); // branch on overflow set
+    byte ADC()
+    {
+        ushort temp = (ushort)a + (ushort)fetched + (ushort)GetFlag(C);
+        SetFlag(StatusFlag.C, temp > 255);
+        SetFlag(StatusFlag.Z, (temp & 0x00FF) == 0);
+        // i'm not going to lie, just copied this because I was not going to derive this on my own
+        SetFlag(StatusFlag.V, ~(A ^ fetched) & (A ^ temp) & 0x0080);
+        SetFlag(StatusFlag.N, temp & 0x80);
+        A = (byte)temp;
+
+    } // add with carry
+    byte AND()
+    {
+        fetch();
+        A = (byte)(A & fetched);
+        SetFlag(StatusFlag.N, (A & 0b10000000) != 0);
+        SetFlag(StatusFlag.Z, A == 0);
+        return 0;
+    } // and (with accumulator)
+    byte ASL()
+    {
+        fetch();
+        byte temp = (byte)(fetched << 1);
+        SetFlag(StatusFlag.C, (fetched & 0b10000000) != 0);
+        SetFlag(StatusFlag.Z, temp == 0);
+        SetFlag(StatusFlag.N, (temp & 0b10000000) != 0);
+        if (instructions[opcode].addrMode == imp)
+        {
+            A = temp;
+        } else
+        {
+            write(addrAbs, temp);
+        }
+
+        return 0;
+    } // arith shft left
+    byte BCC()
+    {
+        if (GetFlag(StatusFlag.C) == 0)
+        {
+            cycles++;
+            addrAbs = (ushort)(PC + addrRel);
+
+            if ((addrAbs & 0b11110000) != (PC & 0b11110000)) cycles++; // checks if different page
+            
+            PC = addrAbs;
+        }
+        return 0;
+    } // branch on carry clear
+    byte BCS()
+    {
+        if (GetFlag(StatusFlag.C) == 1)
+        {
+            cycles++;
+            addrAbs = (ushort)(PC + addrRel);
+
+            if ((addrAbs & 0b11110000) != (PC & 0b11110000)) cycles++; // checks if different page
+            
+            PC = addrAbs;
+        }
+        return 0;
+    } // branch on carry set 
+    byte BEQ()
+    {
+        if (GetFlag(StatusFlag.Z) == 1)
+        {
+            cycles++;
+            addrAbs = (ushort)(PC + addrRel);
+
+            if ((addrAbs & 0b11110000) != (PC & 0b11110000)) cycles++; // checks if different page
+            
+            PC = addrAbs;
+        }
+        return 0;
+    } // branch on equal
+    byte BIT()
+    {
+        fetch();
+        SetFlag(StatusFlag.V, (fetched & 0b01000000) != 0);
+        SetFlag(StatusFlag.N, (fetched & 0b10000000) != 0);
+        SetFlag(StatusFlag.Z, (fetched & A) == 0);
+        return 0;
+    } // bit test
+    byte BMI()
+    {
+        if (GetFlag(StatusFlag.N) == 1)
+        {
+            cycles++;
+            addrAbs = (ushort)(PC + addrRel);
+
+            if ((addrAbs & 0b11110000) != (PC & 0b11110000)) cycles++; // checks if different page
+            
+            PC = addrAbs;
+        }
+        return 0;
+    } // branch on minus (negative set)
+    byte BNE()
+    {
+        if (GetFlag(StatusFlag.Z) == 0)
+        {
+            cycles++;
+            addrAbs = (ushort)(PC + addrRel);
+
+            if ((addrAbs & 0b11110000) != (PC & 0b11110000)) cycles++; // checks if different page
+            
+            PC = addrAbs;
+        }
+        return 0;
+    } // branch on not equal (zero clear)
+    byte BPL()
+    {
+        if (GetFlag(StatusFlag.N) == 0)
+        {
+            cycles++;
+            addrAbs = (ushort)(PC + addrRel);
+
+            if ((addrAbs & 0b11110000) != (PC & 0b11110000)) cycles++; // checks if different page
+            
+            PC = addrAbs;
+        }
+        return 0;
+    } // branch on plus (negative clear)
+    byte BRK()
+    {
+        PC++; 
+
+        SetFlag(StatusFlag.I, true);
+        Push((PC >> 8) & (0x00FF));
+        Push(PC & (0x00FF));
+
+        SetFlag(StatusFlag.B, true);
+        Push(GetStatus());
+        SetFlag(StatusFlag.B, false);
+
+        addrAbs = 0xFFFE;
+        ushort low = read(addrAbs);
+        ushort high = read(addrAbs + 1);
+        PC = (high << 8) | low;
+        return 0;
+    } // break / interrupt, same functionality as NMI
+    byte BVC()
+    {
+        if (GetFlag(StatusFlag.V) == 0)
+        {
+            cycles++;
+            addrAbs = (ushort)(PC + addrRel);
+
+            if ((addrAbs & 0b11110000) != (PC & 0b11110000)) cycles++; // checks if different page
+            
+            PC = addrAbs;
+        }
+        return 0;
+    } // branch on overflow clear
+    byte BVS()
+    {
+        if (GetFlag(StatusFlag.V) == 1)
+        {
+            cycles++;
+            addrAbs = (ushort)(PC + addrRel);
+
+            if ((addrAbs & 0b11110000) != (PC & 0b11110000)) cycles++; // checks if different page
+            
+            PC = addrAbs;
+        }
+        return 0;
+    } // branch on overflow set
     byte CLC()
     {
         SetFlag(StatusFlag.C, false);
@@ -147,9 +418,30 @@ public class CPU
         SetFlag(StatusFlag.V, false);
         return 0;
     } // clear overflow
-    byte CMP(); // compare (with accumulator)
-    byte CPX(); // compare with X
-    byte CPY(); // compare with Y
+    byte CMP()
+    {
+        fetch();
+        SetFlag(StatusFlag.C, A >= fetched);
+        SetFlag(StatusFlag.Z, A == fetched);
+        SetFlag(StatusFlag.N, (byte)(A - fetched) & 0b10000000 != 0);
+        return 0;
+    } // compare (with accumulator)
+    byte CPX()
+    {
+        fetch();
+        SetFlag(StatusFlag.C, X >= fetched);
+        SetFlag(StatusFlag.Z, X == fetched);
+        SetFlag(StatusFlag.N, (byte)(X - fetched) & 0b10000000 != 0);
+        return 0;
+    } // compare with X
+    byte CPY()
+    {
+        fetch();
+        SetFlag(StatusFlag.C, Y >= fetched);
+        SetFlag(StatusFlag.Z, Y == fetched);
+        SetFlag(StatusFlag.N, (byte)(Y - fetched) & 0b10000000 != 0);
+        return 0;
+    } // compare with Y
     byte DEC()
     {
         A = (byte)(A - 1);
@@ -171,7 +463,14 @@ public class CPU
         SetFlag(StatusFlag.Z, Y == 0);
         return 0;
     } // decrement Y
-    byte EOR(); // exclusive or (with accumulator)
+    byte EOR()
+    {
+        fetch();
+        A = (byte)(A ^ fetched);
+        SetFlag(StatusFlag.N, (A & 0b10000000) != 0);
+        SetFlag(StatusFlag.Z, A == 0);
+        return 0;
+    } // exclusive or (with accumulator)
     byte INC()
     {
         A = (byte)(A + 1);
@@ -193,10 +492,21 @@ public class CPU
         SetFlag(StatusFlag.Z, Y == 0);
         return 0;
     } // increment Y
-    byte JMP(); // jump
-    byte JSR(); // jump subroutine
+    byte JMP()
+    {
+        PC = addrAbs;
+        return 0;
+    } // jump
+    byte JSR()
+    {
+        PC--;
+
+        Push((byte)((PC >> 8) & 0x00FF));    
+        Push((byte)((PC & 0x00FF)));
+    } // jump subroutine
     byte LDA()
     {
+        fetch();
         A = fetched;
         SetFlag(StatusFlag.N, (A & 0b10000000) != 0);
         SetFlag(StatusFlag.Z, A == 0);
@@ -204,6 +514,7 @@ public class CPU
     } // load accumulator
     byte LDX()
     {
+        fetch();
         X = fetched;
         SetFlag(StatusFlag.N, (X & 0b10000000) != 0);
         SetFlag(StatusFlag.Z, X == 0);
@@ -211,26 +522,123 @@ public class CPU
     } // load X
     byte LDY()
     {
+        fetch();
         Y = fetched;
         SetFlag(StatusFlag.N, (Y & 0b10000000) != 0);
         SetFlag(StatusFlag.Z, Y == 0);
         return 0;
     } // load Y
-    byte LSR(); // logical shift right
+    byte LSR()
+    {
+        fetch();
+        byte temp = (byte)(fetched >> 1);
+        SetFlag(StatusFlag.N, false);
+        SetFlag(StatusFlag.Z, temp == 0);
+        SetFlag(StatusFlag.C, (fetched & 0b00000001) != 0);
+        if (instructions[opcode].addrMode == imp)
+        {
+            A = temp;
+        } else
+        {
+            write(absAddr, temp);
+        }
+        return 0;
+    } // logical shift right
     byte NOP()
     {
         return 0; 
     } // no operation, ths is cray cray yo!
-    byte ORA(); // or with accumulator
-    byte PHA(); // push accumulator
-    byte PHP(); // push processor status (SR)
-    byte PLA(); // pull accumulator
-    byte PLP(); // pull processor status (SR)
-    byte ROL(); // rotate left
-    byte ROR(); // rotate right
-    byte RTI(); // return from interrupt
-    byte RTS(); // return from subroutine
-    byte SBC(); // subtract with carry
+    byte ORA()
+    {
+        fetch();
+        A = (byte)(A | fetched);
+        SetFlag(StatusFlag.N, (A & 0b10000000) != 0);
+        SetFlag(StatusFlag.Z, A == 0);
+        return 0;
+    } // or with accumulator
+    byte PHA()
+    {
+        Push(A);
+        return 0;
+    } // push accumulator
+    byte PHP()
+    {
+        Push(SR);
+        return 0;
+    } // push processor status (SR)
+    byte PLA()
+    {
+        A = Pull();
+        SetFlag(StatusFlag.N, (A & 0b10000000) != 0);
+        SetFlag(StatusFlag.Z, A == 0);
+        return 0;
+    } // pull accumulator
+    byte PLP()
+    {
+        SR = Pull();
+        return 0;
+    } // pull processor status (SR)
+    byte ROL()
+    {
+        fetch();
+        byte temp = (byte)((fetched << 1) | GetFlag(StatusFlag.C));
+        
+        SetFlag(StatusFlag.C, fetched & 0b10000000 != 0);
+        SetFlag(StatusFlag.Z, temp == 0);
+        SetFlag(StatusFlag.N, temp & 0b10000000 != 0);
+        if (instructions[opcode].addrMode == imp)
+        {   
+            A = temp;
+        } else
+        {
+            write(absAddr, temp);
+        }
+        return 0;
+    } // rotate left
+    byte ROR()
+    {
+        fetch();
+        byte temp = (byte)((GetFlag(StatusFlag.C) << 7) | ((fetched & 0b11111110) >> 1));
+        SetFlag(StatusFlag.C, (fetched & 0b00000001) != 0);
+        SetFlag(StatusFlag.Z, temp == 0);
+        SetFlag(StatusFlag.N, (temp & 0b10000000) != 0);
+        if (instructions[opcode].addrMode == imp)
+        {
+            A = temp;
+        } else
+        {   
+            write(absAddr, temp);
+        }
+        return 0;
+    } // rotate right
+    byte RTI()
+    {
+        SR = Pull();
+        SR &= ~(StatusFlag.B);
+        SR &=  ~(StatusFlag.U);
+
+        PC = Pull();
+        PC |= Pull() << 8;
+        return 0;
+    } // return from interrupt
+    byte RTS()
+    {
+        PC = Pull();
+        PC |= Pull() << 8;
+        PC++;
+        return 0;
+    } // return from subroutine
+    byte SBC()
+    {
+        fetch();
+        ushort val = ((ushort)fetched) ^ 0x00FF;
+        ushort temp = (ushort)A + value + (ushort)GetFlag(C); 
+        SetFlag(StatusFlag.C, (temp & 0xFF00) > 0);
+        SetFlag(StatusFlag.Z, ((temp & 0x00FF) == 0));
+        SetFlag(StatusFlag.V, (temp ^ A) & (temp ^ value) & 0x0080);
+        SetFlag(StatusFlag.N, temp & 0x0080);
+        A = temp & 0x00FF;
+    } // subtract with carry
     byte SEC()
     {
         SetFlag(StatusFlag.C, true);
@@ -323,14 +731,69 @@ public class CPU
     } // one clock cycle 
 
     // Interrupts
-    void NMI(); // non maskable (can't stop the NMI train!!!)
-    void IRQ(); // maskable, only happens if the I flag is clear. 
-    void RES(); // reset
+    void NMI()
+    {
+        Push((PC >> 8) & (0x00FF));
+        Push(PC & (0x00FF));
 
-    byte fetch();
+        SetFlag(StatusFlag.B, false);
+        SetFlag(StatusFlag.U, true);
+        SetFlag(StatusFlag.I, true);
+        Push(GetStatus());
+
+        addrAbs = 0xFFFE;
+        ushort low = read(addrAbs);
+        ushort high = read(addrAbs + 1);
+        PC = (high << 8) | low;
+
+        cycles = 8;
+    } // non maskable (can't stop the NMI train!!!)
+    void IRQ()
+    {
+        if (GetFlag(I) == 0)
+        {
+            Push((PC >> 8) & (0x00FF));
+            Push(PC & (0x00FF));
+
+            SetFlag(StatusFlag.B, false);
+            SetFlag(StatusFlag.U, true);
+            SetFlag(StatusFlag.I, true);
+            Push(GetStatus());
+
+            addrAbs = 0xFFFE;
+            ushort low = read(addrAbs);
+            ushort high = read(addrAbs + 1);
+            PC = (high << 8) | low;
+            cycles = 7;
+        }
+    } // maskable, only happens if the I flag is clear. 
+    void RES(){
+        A = 0;
+        x = 0;
+        Y = 0;
+        SP = 0xFD;
+        addrAbs = 0xFFFC;
+        ushort low = read(addrAbs);
+        ushort high = read(addrAbs + 1);
+        
+        addr_rel = 0x0000;
+        addr_abs = 0x0000;
+        fetched = 0x00;
+
+        cycles = 8; // arbitrary number I suppose, resets take time
+    } // reset
+
+    byte fetch()
+    {
+        if (instructions[opcode].addrMode != imp)
+        {
+            fetched = read(addrAbs);
+        }
+        return fetched;
+    }
     byte fetched = 0x00; 
-    UInt16 addrAbs = 0x0000;
-    UInt16 addrRel = 0x00;
+    ushort addrAbs = 0x0000;
+    ushort addrRel = 0x00;
     byte opcode = 0x00;
     byte cycles = 0;
 }
