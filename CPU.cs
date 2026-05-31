@@ -3,6 +3,8 @@ using System.ComponentModel;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks.Dataflow;
 
+    
+
 public class CPU
 {
     // the registers that are used 
@@ -13,29 +15,29 @@ public class CPU
     public ushort PC; // program counter
     public byte SP; // stack pointer
     public byte SR; // status register
-    private Bus bus;
-    Instruction[] instructions = new Instructions[256]
-    {
-        { "BRK", BRK, imm, 7 },{ "ORA", ORA, inX, 6 },{ "???", XXX, imp, 2 },{ "???", XXX, imp, 8 },{ "???", NOP, imp, 3 },{ "ORA", ORA, zpg, 3 },{ "ASL", ASL, zpg, 5 },{ "???", XXX, imp, 5 },{ "PHP", PHP, imp, 3 },{ "ORA", ORA, imm, 2 },{ "ASL", ASL, imp, 2 },{ "???", XXX, imp, 2 },{ "???", NOP, imp, 4 },{ "ORA", ORA, abs, 4 },{ "ASL", ASL, abs, 6 },{ "???", XXX, imp, 6 },
-		{ "BPL", BPL, rel, 2 },{ "ORA", ORA, inY, 5 },{ "???", XXX, imp, 2 },{ "???", XXX, imp, 8 },{ "???", NOP, imp, 4 },{ "ORA", ORA, zpX, 4 },{ "ASL", ASL, zpX, 6 },{ "???", XXX, imp, 6 },{ "CLC", CLC, imp, 2 },{ "ORA", ORA, abY, 4 },{ "???", NOP, imp, 2 },{ "???", XXX, imp, 7 },{ "???", NOP, imp, 4 },{ "ORA", ORA, abX, 4 },{ "ASL", ASL, abX, 7 },{ "???", XXX, imp, 7 },
-		{ "JSR", JSR, abs, 6 },{ "AND", AND, inX, 6 },{ "???", XXX, imp, 2 },{ "???", XXX, imp, 8 },{ "BIT", BIT, zpg, 3 },{ "AND", AND, zpg, 3 },{ "ROL", ROL, zpg, 5 },{ "???", XXX, imp, 5 },{ "PLP", PLP, imp, 4 },{ "AND", AND, imm, 2 },{ "ROL", ROL, imp, 2 },{ "???", XXX, imp, 2 },{ "BIT", BIT, abs, 4 },{ "AND", AND, abs, 4 },{ "ROL", ROL, abs, 6 },{ "???", XXX, imp, 6 },
-		{ "BMI", BMI, rel, 2 },{ "AND", AND, inY, 5 },{ "???", XXX, imp, 2 },{ "???", XXX, imp, 8 },{ "???", NOP, imp, 4 },{ "AND", AND, zpX, 4 },{ "ROL", ROL, zpX, 6 },{ "???", XXX, imp, 6 },{ "SEC", SEC, imp, 2 },{ "AND", AND, abY, 4 },{ "???", NOP, imp, 2 },{ "???", XXX, imp, 7 },{ "???", NOP, imp, 4 },{ "AND", AND, abX, 4 },{ "ROL", ROL, abX, 7 },{ "???", XXX, imp, 7 },
-		{ "RTI", RTI, imp, 6 },{ "EOR", EOR, inX, 6 },{ "???", XXX, imp, 2 },{ "???", XXX, imp, 8 },{ "???", NOP, imp, 3 },{ "EOR", EOR, zpg, 3 },{ "LSR", LSR, zpg, 5 },{ "???", XXX, imp, 5 },{ "PHA", PHA, imp, 3 },{ "EOR", EOR, imm, 2 },{ "LSR", LSR, imp, 2 },{ "???", XXX, imp, 2 },{ "JMP", JMP, abs, 3 },{ "EOR", EOR, abs, 4 },{ "LSR", LSR, abs, 6 },{ "???", XXX, imp, 6 },
-		{ "BVC", BVC, rel, 2 },{ "EOR", EOR, inY, 5 },{ "???", XXX, imp, 2 },{ "???", XXX, imp, 8 },{ "???", NOP, imp, 4 },{ "EOR", EOR, zpX, 4 },{ "LSR", LSR, zpX, 6 },{ "???", XXX, imp, 6 },{ "CLI", CLI, imp, 2 },{ "EOR", EOR, abY, 4 },{ "???", NOP, imp, 2 },{ "???", XXX, imp, 7 },{ "???", NOP, imp, 4 },{ "EOR", EOR, abX, 4 },{ "LSR", LSR, abX, 7 },{ "???", XXX, imp, 7 },
-		{ "RTS", RTS, imp, 6 },{ "ADC", ADC, inX, 6 },{ "???", XXX, imp, 2 },{ "???", XXX, imp, 8 },{ "???", NOP, imp, 3 },{ "ADC", ADC, zpg, 3 },{ "ROR", ROR, zpg, 5 },{ "???", XXX, imp, 5 },{ "PLA", PLA, imp, 4 },{ "ADC", ADC, imm, 2 },{ "ROR", ROR, imp, 2 },{ "???", XXX, imp, 2 },{ "JMP", JMP, ind, 5 },{ "ADC", ADC, abs, 4 },{ "ROR", ROR, abs, 6 },{ "???", XXX, imp, 6 },
-		{ "BVS", BVS, rel, 2 },{ "ADC", ADC, inY, 5 },{ "???", XXX, imp, 2 },{ "???", XXX, imp, 8 },{ "???", NOP, imp, 4 },{ "ADC", ADC, zpX, 4 },{ "ROR", ROR, zpX, 6 },{ "???", XXX, imp, 6 },{ "SEI", SEI, imp, 2 },{ "ADC", ADC, abY, 4 },{ "???", NOP, imp, 2 },{ "???", XXX, imp, 7 },{ "???", NOP, imp, 4 },{ "ADC", ADC, abX, 4 },{ "ROR", ROR, abX, 7 },{ "???", XXX, imp, 7 },
-		{ "???", NOP, imp, 2 },{ "STA", STA, inX, 6 },{ "???", NOP, imp, 2 },{ "???", XXX, imp, 6 },{ "STY", STY, zpg, 3 },{ "STA", STA, zpg, 3 },{ "STX", STX, zpg, 3 },{ "???", XXX, imp, 3 },{ "DEY", DEY, imp, 2 },{ "???", NOP, imp, 2 },{ "TXA", TXA, imp, 2 },{ "???", XXX, imp, 2 },{ "STY", STY, abs, 4 },{ "STA", STA, abs, 4 },{ "STX", STX, abs, 4 },{ "???", XXX, imp, 4 },
-		{ "BCC", BCC, rel, 2 },{ "STA", STA, inY, 6 },{ "???", XXX, imp, 2 },{ "???", XXX, imp, 6 },{ "STY", STY, zpX, 4 },{ "STA", STA, zpX, 4 },{ "STX", STX, zpY, 4 },{ "???", XXX, imp, 4 },{ "TYA", TYA, imp, 2 },{ "STA", STA, abY, 5 },{ "TXS", TXS, imp, 2 },{ "???", XXX, imp, 5 },{ "???", NOP, imp, 5 },{ "STA", STA, abX, 5 },{ "???", XXX, imp, 5 },{ "???", XXX, imp, 5 },
-		{ "LDY", LDY, imm, 2 },{ "LDA", LDA, inX, 6 },{ "LDX", LDX, imm, 2 },{ "???", XXX, imp, 6 },{ "LDY", LDY, zpg, 3 },{ "LDA", LDA, zpg, 3 },{ "LDX", LDX, zpg, 3 },{ "???", XXX, imp, 3 },{ "TAY", TAY, imp, 2 },{ "LDA", LDA, imm, 2 },{ "TAX", TAX, imp, 2 },{ "???", XXX, imp, 2 },{ "LDY", LDY, abs, 4 },{ "LDA", LDA, abs, 4 },{ "LDX", LDX, abs, 4 },{ "???", XXX, imp, 4 },
-		{ "BCS", BCS, rel, 2 },{ "LDA", LDA, inY, 5 },{ "???", XXX, imp, 2 },{ "???", XXX, imp, 5 },{ "LDY", LDY, zpX, 4 },{ "LDA", LDA, zpX, 4 },{ "LDX", LDX, zpY, 4 },{ "???", XXX, imp, 4 },{ "CLV", CLV, imp, 2 },{ "LDA", LDA, abY, 4 },{ "TSX", TSX, imp, 2 },{ "???", XXX, imp, 4 },{ "LDY", LDY, abX, 4 },{ "LDA", LDA, abX, 4 },{ "LDX", LDX, abY, 4 },{ "???", XXX, imp, 4 },
-		{ "CPY", CPY, imm, 2 },{ "CMP", CMP, inX, 6 },{ "???", NOP, imp, 2 },{ "???", XXX, imp, 8 },{ "CPY", CPY, zpg, 3 },{ "CMP", CMP, zpg, 3 },{ "DEC", DEC, zpg, 5 },{ "???", XXX, imp, 5 },{ "INY", INY, imp, 2 },{ "CMP", CMP, imm, 2 },{ "DEX", DEX, imp, 2 },{ "???", XXX, imp, 2 },{ "CPY", CPY, abs, 4 },{ "CMP", CMP, abs, 4 },{ "DEC", DEC, abs, 6 },{ "???", XXX, imp, 6 },
-		{ "BNE", BNE, rel, 2 },{ "CMP", CMP, inY, 5 },{ "???", XXX, imp, 2 },{ "???", XXX, imp, 8 },{ "???", NOP, imp, 4 },{ "CMP", CMP, zpX, 4 },{ "DEC", DEC, zpX, 6 },{ "???", XXX, imp, 6 },{ "CLD", CLD, imp, 2 },{ "CMP", CMP, abY, 4 },{ "NOP", NOP, imp, 2 },{ "???", XXX, imp, 7 },{ "???", NOP, imp, 4 },{ "CMP", CMP, abX, 4 },{ "DEC", DEC, abX, 7 },{ "???", XXX, imp, 7 },
-		{ "CPX", CPX, imm, 2 },{ "SBC", SBC, inX, 6 },{ "???", NOP, imp, 2 },{ "???", XXX, imp, 8 },{ "CPX", CPX, zpg, 3 },{ "SBC", SBC, zpg, 3 },{ "INC", INC, zpg, 5 },{ "???", XXX, imp, 5 },{ "INX", INX, imp, 2 },{ "SBC", SBC, imm, 2 },{ "NOP", NOP, imp, 2 },{ "???", SBC, imp, 2 },{ "CPX", CPX, abs, 4 },{ "SBC", SBC, abs, 4 },{ "INC", INC, abs, 6 },{ "???", XXX, imp, 6 },
-		{ "BEQ", BEQ, rel, 2 },{ "SBC", SBC, inY, 5 },{ "???", XXX, imp, 2 },{ "???", XXX, imp, 8 },{ "???", NOP, imp, 4 },{ "SBC", SBC, zpX, 4 },{ "INC", INC, zpX, 6 },{ "???", XXX, imp, 6 },{ "SED", SED, imp, 2 },{ "SBC", SBC, abY, 4 },{ "NOP", NOP, imp, 2 },{ "???", XXX, imp, 7 },{ "???", NOP, imp, 4 },{ "SBC", SBC, abX, 4 },{ "INC", INC, abX, 7 },{ "???", XXX, imp, 7 },
-    }; // because 16x16 table of opcodes
+    private Bus bus = null!; // trust me bro it's gonna be initialized soon
+    Instruction[] instructions; // because 16x16 table of opcodes
     public CPU()
     {
-        
+        instructions =
+        [
+            new Instruction("BRK", BRK, imm, 7 ),new Instruction("ORA", ORA, inX, 6 ),new Instruction("???", XXX, imp, 2 ),new Instruction("???", XXX, imp, 8 ),new Instruction("???", NOP, imp, 3 ),new Instruction("ORA", ORA, zpg, 3 ),new Instruction("ASL", ASL, zpg, 5 ),new Instruction("???", XXX, imp, 5 ),new Instruction("PHP", PHP, imp, 3 ),new Instruction("ORA", ORA, imm, 2 ),new Instruction("ASL", ASL, imp, 2 ),new Instruction("???", XXX, imp, 2 ),new Instruction("???", NOP, imp, 4 ),new Instruction("ORA", ORA, abs, 4 ),new Instruction("ASL", ASL, abs, 6 ),new Instruction("???", XXX, imp, 6 ),
+            new Instruction("BPL", BPL, rel, 2 ),new Instruction("ORA", ORA, inY, 5 ),new Instruction("???", XXX, imp, 2 ),new Instruction("???", XXX, imp, 8 ),new Instruction("???", NOP, imp, 4 ),new Instruction("ORA", ORA, zpX, 4 ),new Instruction("ASL", ASL, zpX, 6 ),new Instruction("???", XXX, imp, 6 ),new Instruction("CLC", CLC, imp, 2 ),new Instruction("ORA", ORA, abY, 4 ),new Instruction("???", NOP, imp, 2 ),new Instruction("???", XXX, imp, 7 ),new Instruction("???", NOP, imp, 4 ),new Instruction("ORA", ORA, abX, 4 ),new Instruction("ASL", ASL, abX, 7 ),new Instruction("???", XXX, imp, 7 ),
+            new Instruction("JSR", JSR, abs, 6 ),new Instruction("AND", AND, inX, 6 ),new Instruction("???", XXX, imp, 2 ),new Instruction("???", XXX, imp, 8 ),new Instruction("BIT", BIT, zpg, 3 ),new Instruction("AND", AND, zpg, 3 ),new Instruction("ROL", ROL, zpg, 5 ),new Instruction("???", XXX, imp, 5 ),new Instruction("PLP", PLP, imp, 4 ),new Instruction("AND", AND, imm, 2 ),new Instruction("ROL", ROL, imp, 2 ),new Instruction("???", XXX, imp, 2 ),new Instruction("BIT", BIT, abs, 4 ),new Instruction("AND", AND, abs, 4 ),new Instruction("ROL", ROL, abs, 6 ),new Instruction("???", XXX, imp, 6 ),
+            new Instruction("BMI", BMI, rel, 2 ),new Instruction("AND", AND, inY, 5 ),new Instruction("???", XXX, imp, 2 ),new Instruction("???", XXX, imp, 8 ),new Instruction("???", NOP, imp, 4 ),new Instruction("AND", AND, zpX, 4 ),new Instruction("ROL", ROL, zpX, 6 ),new Instruction("???", XXX, imp, 6 ),new Instruction("SEC", SEC, imp, 2 ),new Instruction("AND", AND, abY, 4 ),new Instruction("???", NOP, imp, 2 ),new Instruction("???", XXX, imp, 7 ),new Instruction("???", NOP, imp, 4 ),new Instruction("AND", AND, abX, 4 ),new Instruction("ROL", ROL, abX, 7 ),new Instruction("???", XXX, imp, 7 ),
+            new Instruction("RTI", RTI, imp, 6 ),new Instruction("EOR", EOR, inX, 6 ),new Instruction("???", XXX, imp, 2 ),new Instruction("???", XXX, imp, 8 ),new Instruction("???", NOP, imp, 3 ),new Instruction("EOR", EOR, zpg, 3 ),new Instruction("LSR", LSR, zpg, 5 ),new Instruction("???", XXX, imp, 5 ),new Instruction("PHA", PHA, imp, 3 ),new Instruction("EOR", EOR, imm, 2 ),new Instruction("LSR", LSR, imp, 2 ),new Instruction("???", XXX, imp, 2 ),new Instruction("JMP", JMP, abs, 3 ),new Instruction("EOR", EOR, abs, 4 ),new Instruction("LSR", LSR, abs, 6 ),new Instruction("???", XXX, imp, 6 ),
+            new Instruction("BVC", BVC, rel, 2 ),new Instruction("EOR", EOR, inY, 5 ),new Instruction("???", XXX, imp, 2 ),new Instruction("???", XXX, imp, 8 ),new Instruction("???", NOP, imp, 4 ),new Instruction("EOR", EOR, zpX, 4 ),new Instruction("LSR", LSR, zpX, 6 ),new Instruction("???", XXX, imp, 6 ),new Instruction("CLI", CLI, imp, 2 ),new Instruction("EOR", EOR, abY, 4 ),new Instruction("???", NOP, imp, 2 ),new Instruction("???", XXX, imp, 7 ),new Instruction("???", NOP, imp, 4 ),new Instruction("EOR", EOR, abX, 4 ),new Instruction("LSR", LSR, abX, 7 ),new Instruction("???", XXX, imp, 7 ),
+            new Instruction("RTS", RTS, imp, 6 ),new Instruction("ADC", ADC, inX, 6 ),new Instruction("???", XXX, imp, 2 ),new Instruction("???", XXX, imp, 8 ),new Instruction("???", NOP, imp, 3 ),new Instruction("ADC", ADC, zpg, 3 ),new Instruction("ROR", ROR, zpg, 5 ),new Instruction("???", XXX, imp, 5 ),new Instruction("PLA", PLA, imp, 4 ),new Instruction("ADC", ADC, imm, 2 ),new Instruction("ROR", ROR, imp, 2 ),new Instruction("???", XXX, imp, 2 ),new Instruction("JMP", JMP, ind, 5 ),new Instruction("ADC", ADC, abs, 4 ),new Instruction("ROR", ROR, abs, 6 ),new Instruction("???", XXX, imp, 6 ),
+            new Instruction("BVS", BVS, rel, 2 ),new Instruction("ADC", ADC, inY, 5 ),new Instruction("???", XXX, imp, 2 ),new Instruction("???", XXX, imp, 8 ),new Instruction("???", NOP, imp, 4 ),new Instruction("ADC", ADC, zpX, 4 ),new Instruction("ROR", ROR, zpX, 6 ),new Instruction("???", XXX, imp, 6 ),new Instruction("SEI", SEI, imp, 2 ),new Instruction("ADC", ADC, abY, 4 ),new Instruction("???", NOP, imp, 2 ),new Instruction("???", XXX, imp, 7 ),new Instruction("???", NOP, imp, 4 ),new Instruction("ADC", ADC, abX, 4 ),new Instruction("ROR", ROR, abX, 7 ),new Instruction("???", XXX, imp, 7 ),
+            new Instruction("???", NOP, imp, 2 ),new Instruction("STA", STA, inX, 6 ),new Instruction("???", NOP, imp, 2 ),new Instruction("???", XXX, imp, 6 ),new Instruction("STY", STY, zpg, 3 ),new Instruction("STA", STA, zpg, 3 ),new Instruction("STX", STX, zpg, 3 ),new Instruction("???", XXX, imp, 3 ),new Instruction("DEY", DEY, imp, 2 ),new Instruction("???", NOP, imp, 2 ),new Instruction("TXA", TXA, imp, 2 ),new Instruction("???", XXX, imp, 2 ),new Instruction("STY", STY, abs, 4 ),new Instruction("STA", STA, abs, 4 ),new Instruction("STX", STX, abs, 4 ),new Instruction("???", XXX, imp, 4 ),
+            new Instruction("BCC", BCC, rel, 2 ),new Instruction("STA", STA, inY, 6 ),new Instruction("???", XXX, imp, 2 ),new Instruction("???", XXX, imp, 6 ),new Instruction("STY", STY, zpX, 4 ),new Instruction("STA", STA, zpX, 4 ),new Instruction("STX", STX, zpY, 4 ),new Instruction("???", XXX, imp, 4 ),new Instruction("TYA", TYA, imp, 2 ),new Instruction("STA", STA, abY, 5 ),new Instruction("TXS", TXS, imp, 2 ),new Instruction("???", XXX, imp, 5 ),new Instruction("???", NOP, imp, 5 ),new Instruction("STA", STA, abX, 5 ),new Instruction("???", XXX, imp, 5 ),new Instruction("???", XXX, imp, 5 ),
+            new Instruction("LDY", LDY, imm, 2 ),new Instruction("LDA", LDA, inX, 6 ),new Instruction("LDX", LDX, imm, 2 ),new Instruction("???", XXX, imp, 6 ),new Instruction("LDY", LDY, zpg, 3 ),new Instruction("LDA", LDA, zpg, 3 ),new Instruction("LDX", LDX, zpg, 3 ),new Instruction("???", XXX, imp, 3 ),new Instruction("TAY", TAY, imp, 2 ),new Instruction("LDA", LDA, imm, 2 ),new Instruction("TAX", TAX, imp, 2 ),new Instruction("???", XXX, imp, 2 ),new Instruction("LDY", LDY, abs, 4 ),new Instruction("LDA", LDA, abs, 4 ),new Instruction("LDX", LDX, abs, 4 ),new Instruction("???", XXX, imp, 4 ),
+            new Instruction("BCS", BCS, rel, 2 ),new Instruction("LDA", LDA, inY, 5 ),new Instruction("???", XXX, imp, 2 ),new Instruction("???", XXX, imp, 5 ),new Instruction("LDY", LDY, zpX, 4 ),new Instruction("LDA", LDA, zpX, 4 ),new Instruction("LDX", LDX, zpY, 4 ),new Instruction("???", XXX, imp, 4 ),new Instruction("CLV", CLV, imp, 2 ),new Instruction("LDA", LDA, abY, 4 ),new Instruction("TSX", TSX, imp, 2 ),new Instruction("???", XXX, imp, 4 ),new Instruction("LDY", LDY, abX, 4 ),new Instruction("LDA", LDA, abX, 4 ),new Instruction("LDX", LDX, abY, 4 ),new Instruction("???", XXX, imp, 4 ),
+            new Instruction("CPY", CPY, imm, 2 ),new Instruction("CMP", CMP, inX, 6 ),new Instruction("???", NOP, imp, 2 ),new Instruction("???", XXX, imp, 8 ),new Instruction("CPY", CPY, zpg, 3 ),new Instruction("CMP", CMP, zpg, 3 ),new Instruction("DEC", DEC, zpg, 5 ),new Instruction("???", XXX, imp, 5 ),new Instruction("INY", INY, imp, 2 ),new Instruction("CMP", CMP, imm, 2 ),new Instruction("DEX", DEX, imp, 2 ),new Instruction("???", XXX, imp, 2 ),new Instruction("CPY", CPY, abs, 4 ),new Instruction("CMP", CMP, abs, 4 ),new Instruction("DEC", DEC, abs, 6 ),new Instruction("???", XXX, imp, 6 ),
+            new Instruction("BNE", BNE, rel, 2 ),new Instruction("CMP", CMP, inY, 5 ),new Instruction("???", XXX, imp, 2 ),new Instruction("???", XXX, imp, 8 ),new Instruction("???", NOP, imp, 4 ),new Instruction("CMP", CMP, zpX, 4 ),new Instruction("DEC", DEC, zpX, 6 ),new Instruction("???", XXX, imp, 6 ),new Instruction("CLD", CLD, imp, 2 ),new Instruction("CMP", CMP, abY, 4 ),new Instruction("NOP", NOP, imp, 2 ),new Instruction("???", XXX, imp, 7 ),new Instruction("???", NOP, imp, 4 ),new Instruction("CMP", CMP, abX, 4 ),new Instruction("DEC", DEC, abX, 7 ),new Instruction("???", XXX, imp, 7 ),
+            new Instruction("CPX", CPX, imm, 2 ),new Instruction("SBC", SBC, inX, 6 ),new Instruction("???", NOP, imp, 2 ),new Instruction("???", XXX, imp, 8 ),new Instruction("CPX", CPX, zpg, 3 ),new Instruction("SBC", SBC, zpg, 3 ),new Instruction("INC", INC, zpg, 5 ),new Instruction("???", XXX, imp, 5 ),new Instruction("INX", INX, imp, 2 ),new Instruction("SBC", SBC, imm, 2 ),new Instruction("NOP", NOP, imp, 2 ),new Instruction("???", SBC, imp, 2 ),new Instruction("CPX", CPX, abs, 4 ),new Instruction("SBC", SBC, abs, 4 ),new Instruction("INC", INC, abs, 6 ),new Instruction("???", XXX, imp, 6 ),
+            new Instruction("BEQ", BEQ, rel, 2 ),new Instruction("SBC", SBC, inY, 5 ),new Instruction("???", XXX, imp, 2 ),new Instruction("???", XXX, imp, 8 ),new Instruction("???", NOP, imp, 4 ),new Instruction("SBC", SBC, zpX, 4 ),new Instruction("INC", INC, zpX, 6 ),new Instruction("???", XXX, imp, 6 ),new Instruction("SED", SED, imp, 2 ),new Instruction("SBC", SBC, abY, 4 ),new Instruction("NOP", NOP, imp, 2 ),new Instruction("???", XXX, imp, 7 ),new Instruction("???", NOP, imp, 4 ),new Instruction("SBC", SBC, abX, 4 ),new Instruction("INC", INC, abX, 7 ),new Instruction("???", XXX, imp, 7 ),
+        ];
     }
     public void ConnectBus(Bus bus)
     {
@@ -49,12 +51,12 @@ public class CPU
     */
     byte read(ushort address, bool bReadOnly = false)
     {
-        return bus.read(address, bReadOnly); // read from the bus
+        return bus.cpuRead(address, bReadOnly); // read from the bus
     }
 
     void write(ushort address, byte data)
     {
-        bus.write(address, data); 
+        bus.cpuWrite(address, data); 
     }
 
     void SetFlag(StatusFlag flag, bool value)
@@ -69,7 +71,7 @@ public class CPU
     }
     byte GetFlag(StatusFlag flag)
     {
-        if (SR & (byte)flag == 0) return 0;
+        if ((SR & (byte)flag) == 0) return 0;
         return 1;
     }
     byte GetStatus()
@@ -110,7 +112,10 @@ public class CPU
     */
 
     // list of address modes
-    byte acc(); 
+    byte acc()
+    {
+        return 0;
+    } 
     byte abs() 
     {
         ushort low = read(PC);
@@ -129,9 +134,9 @@ public class CPU
         PC++;
 
         addrAbs = (ushort)(high << 8 | low);
-        addrAbs + X;
+        addrAbs += X;
 
-        if (abbrAbs & 0xFF00 != high << 8) return 1; // if high byte different after adding X (page switch)
+        if ((addrAbs & 0xFF00) != (high << 8)) return 1; // if high byte different after adding X (page switch)
         return 0;
     }
     byte abY()
@@ -142,9 +147,9 @@ public class CPU
         PC++;
 
         addrAbs = (ushort)(high << 8 | low);
-        addrAbs + Y;
+        addrAbs += Y;
 
-        if (abbrAbs & 0xFF00 != high << 8) return 1; // if high byte different after adding X (page switch)
+        if ((addrAbs & 0xFF00) != (high << 8)) return 1; // if high byte different after adding X (page switch)
         return 0;
     } 
     byte imm()
@@ -202,9 +207,9 @@ public class CPU
     } 
     byte rel()
     {
-        addr_rel = read(PC);
+        addrRel = read(PC);
         PC++;
-        if (addrRel & 0x80) addrRel |= 0xFF00; // if the value is negative, sign extend it to 16 bits by setting the high byte to 0xFF
+        if ((addrRel & 0x80) != 0) addrRel |= 0xFF00; // if the value is negative, sign extend it to 16 bits by setting the high byte to 0xFF
         return 0;
     }
     byte zpg()
@@ -216,32 +221,35 @@ public class CPU
     } 
     byte zpX()
     {
-        addrAbs = read(PC) + X;
+        addrAbs = (ushort)(read(PC) + X);
         PC++;
         addrAbs &= 0x00FF;
         return 0;
     } 
     byte zpY()
     {
-        addrAbs = read(PC) + Y;
+        addrAbs = (ushort)(read(PC) + Y);
         PC++;
         addrAbs &= 0x00FF;
         return 0;
     }
 
-    byte XXX(); // all illegal opcodes, might implement some useful ones later. 
+    byte XXX()
+    {
+        return 0;
+    } // all illegal opcodes, might implement some useful ones later. 
 
     // all 56 operates in alphabetical order. yay!
     byte ADC()
     {
-        ushort temp = (ushort)a + (ushort)fetched + (ushort)GetFlag(C);
+        ushort temp = (ushort)(A + fetched + GetFlag(StatusFlag.C));
         SetFlag(StatusFlag.C, temp > 255);
         SetFlag(StatusFlag.Z, (temp & 0x00FF) == 0);
         // i'm not going to lie, just copied this because I was not going to derive this on my own
-        SetFlag(StatusFlag.V, ~(A ^ fetched) & (A ^ temp) & 0x0080);
-        SetFlag(StatusFlag.N, temp & 0x80);
+        SetFlag(StatusFlag.V, (~(A ^ fetched) & (A ^ temp) & 0x0080) != 0);
+        SetFlag(StatusFlag.N, (temp & 0x80) != 0);
         A = (byte)temp;
-
+        return 0;
     } // add with carry
     byte AND()
     {
@@ -359,8 +367,8 @@ public class CPU
         PC++; 
 
         SetFlag(StatusFlag.I, true);
-        Push((PC >> 8) & (0x00FF));
-        Push(PC & (0x00FF));
+        Push((byte)((PC >> 8) & 0x00FF));
+        Push((byte)(PC & 0x00FF));
 
         SetFlag(StatusFlag.B, true);
         Push(GetStatus());
@@ -368,8 +376,8 @@ public class CPU
 
         addrAbs = 0xFFFE;
         ushort low = read(addrAbs);
-        ushort high = read(addrAbs + 1);
-        PC = (high << 8) | low;
+        ushort high = read((ushort)(addrAbs + 1));
+        PC = (ushort)((high << 8) | low);
         return 0;
     } // break / interrupt, same functionality as NMI
     byte BVC()
@@ -423,7 +431,7 @@ public class CPU
         fetch();
         SetFlag(StatusFlag.C, A >= fetched);
         SetFlag(StatusFlag.Z, A == fetched);
-        SetFlag(StatusFlag.N, (byte)(A - fetched) & 0b10000000 != 0);
+        SetFlag(StatusFlag.N, (byte)((A - fetched) & 0b10000000) != 0);
         return 0;
     } // compare (with accumulator)
     byte CPX()
@@ -431,7 +439,7 @@ public class CPU
         fetch();
         SetFlag(StatusFlag.C, X >= fetched);
         SetFlag(StatusFlag.Z, X == fetched);
-        SetFlag(StatusFlag.N, (byte)(X - fetched) & 0b10000000 != 0);
+        SetFlag(StatusFlag.N, (byte)((X - fetched) & 0b10000000) != 0);
         return 0;
     } // compare with X
     byte CPY()
@@ -439,7 +447,7 @@ public class CPU
         fetch();
         SetFlag(StatusFlag.C, Y >= fetched);
         SetFlag(StatusFlag.Z, Y == fetched);
-        SetFlag(StatusFlag.N, (byte)(Y - fetched) & 0b10000000 != 0);
+        SetFlag(StatusFlag.N, (byte)((Y - fetched) & 0b10000000) != 0);
         return 0;
     } // compare with Y
     byte DEC()
@@ -503,6 +511,7 @@ public class CPU
 
         Push((byte)((PC >> 8) & 0x00FF));    
         Push((byte)((PC & 0x00FF)));
+        return 0;
     } // jump subroutine
     byte LDA()
     {
@@ -540,7 +549,7 @@ public class CPU
             A = temp;
         } else
         {
-            write(absAddr, temp);
+            write(addrAbs, temp);
         }
         return 0;
     } // logical shift right
@@ -583,15 +592,15 @@ public class CPU
         fetch();
         byte temp = (byte)((fetched << 1) | GetFlag(StatusFlag.C));
         
-        SetFlag(StatusFlag.C, fetched & 0b10000000 != 0);
+        SetFlag(StatusFlag.C, (fetched & 0b10000000) != 0);
         SetFlag(StatusFlag.Z, temp == 0);
-        SetFlag(StatusFlag.N, temp & 0b10000000 != 0);
+        SetFlag(StatusFlag.N, (temp & 0b10000000) != 0);
         if (instructions[opcode].addrMode == imp)
         {   
             A = temp;
         } else
         {
-            write(absAddr, temp);
+            write(addrAbs, temp);
         }
         return 0;
     } // rotate left
@@ -607,37 +616,40 @@ public class CPU
             A = temp;
         } else
         {   
-            write(absAddr, temp);
+            write(addrAbs, temp);
         }
         return 0;
     } // rotate right
     byte RTI()
     {
         SR = Pull();
-        SR &= ~(StatusFlag.B);
-        SR &=  ~(StatusFlag.U);
+        // SR &= (byte)~StatusFlag.B;
+        // SR &=  (byte)~StatusFlag.U;
+        SetFlag(StatusFlag.B, false);
+        SetFlag(StatusFlag.U, false);
 
         PC = Pull();
-        PC |= Pull() << 8;
+        PC |= (ushort)(Pull() << 8);
         return 0;
     } // return from interrupt
     byte RTS()
     {
         PC = Pull();
-        PC |= Pull() << 8;
+        PC |= (ushort)(Pull() << 8);
         PC++;
         return 0;
     } // return from subroutine
     byte SBC()
     {
         fetch();
-        ushort val = ((ushort)fetched) ^ 0x00FF;
-        ushort temp = (ushort)A + value + (ushort)GetFlag(C); 
+        ushort val = (ushort)(fetched ^ 0x00FF);
+        ushort temp = (ushort)(A + val + (ushort)GetFlag(StatusFlag.C)); 
         SetFlag(StatusFlag.C, (temp & 0xFF00) > 0);
         SetFlag(StatusFlag.Z, ((temp & 0x00FF) == 0));
-        SetFlag(StatusFlag.V, (temp ^ A) & (temp ^ value) & 0x0080);
-        SetFlag(StatusFlag.N, temp & 0x0080);
-        A = temp & 0x00FF;
+        SetFlag(StatusFlag.V, ((temp ^ A) & (temp ^ val) & 0x0080) != 0);
+        SetFlag(StatusFlag.N, (temp & 0x0080) != 0);
+        A = (byte)(temp & 0x00FF);
+        return 0;
     } // subtract with carry
     byte SEC()
     {
@@ -724,7 +736,7 @@ public class CPU
             byte addCycleAddr = instructions[opcode].addrMode();
             byte addCycleOp = instructions[opcode].operate();
 
-            if (addCycleAddr && addCycleOp) cycles++; // if both the address mode and the operate function add a cycle, then add one more cycle.
+            if (addCycleAddr + addCycleOp > 1) cycles++; // if both the address mode and the operate function add a cycle, then add one more cycle.
         }
 
         cycles--; // decrement the cycles.
@@ -733,8 +745,8 @@ public class CPU
     // Interrupts
     void NMI()
     {
-        Push((PC >> 8) & (0x00FF));
-        Push(PC & (0x00FF));
+        Push((byte)((PC >> 8) & (0x00FF)));
+        Push((byte)(PC & 0x00FF));
 
         SetFlag(StatusFlag.B, false);
         SetFlag(StatusFlag.U, true);
@@ -743,17 +755,17 @@ public class CPU
 
         addrAbs = 0xFFFE;
         ushort low = read(addrAbs);
-        ushort high = read(addrAbs + 1);
-        PC = (high << 8) | low;
+        ushort high = read((ushort)(addrAbs + 1));
+        PC = (ushort)((high << 8) | low);
 
         cycles = 8;
     } // non maskable (can't stop the NMI train!!!)
     void IRQ()
     {
-        if (GetFlag(I) == 0)
+        if (GetFlag(StatusFlag.I) == 0)
         {
-            Push((PC >> 8) & (0x00FF));
-            Push(PC & (0x00FF));
+            Push((byte)((PC >> 8) & (ushort)(0x00FF)));
+            Push((byte)(PC & (ushort)0x00FF));
 
             SetFlag(StatusFlag.B, false);
             SetFlag(StatusFlag.U, true);
@@ -762,22 +774,22 @@ public class CPU
 
             addrAbs = 0xFFFE;
             ushort low = read(addrAbs);
-            ushort high = read(addrAbs + 1);
-            PC = (high << 8) | low;
+            ushort high = read((ushort)(addrAbs + 1));
+            PC = (ushort)((high << 8) | low);
             cycles = 7;
         }
     } // maskable, only happens if the I flag is clear. 
     void RES(){
         A = 0;
-        x = 0;
+        X = 0;
         Y = 0;
         SP = 0xFD;
         addrAbs = 0xFFFC;
-        ushort low = read(addrAbs);
-        ushort high = read(addrAbs + 1);
+        ushort low = (ushort)read(addrAbs);
+        ushort high = (ushort)read((ushort)(addrAbs + (ushort)1));
         
-        addr_rel = 0x0000;
-        addr_abs = 0x0000;
+        addrRel = 0x0000;
+        addrAbs = 0x0000;
         fetched = 0x00;
 
         cycles = 8; // arbitrary number I suppose, resets take time
@@ -796,6 +808,7 @@ public class CPU
     ushort addrRel = 0x00;
     byte opcode = 0x00;
     byte cycles = 0;
+    
 }
 
 // each enum represents a different bit in the status register, 8 because it is a byte!
@@ -811,10 +824,18 @@ public enum StatusFlag
     N = (1 << 7), // Negative
 }
 
-public class Instruction
+public struct Instruction
 {
     public string name; // for readability and debugging purposes 
     public Func<byte> operate; // duh
     public Func<byte> addrMode; // duh
     public byte cycles; // num of cycles to complete the instruction
+    public Instruction(string name, Func<byte> operate, Func<byte> addrMode, byte cycles)
+    {
+        this.name = name;
+        this.operate = operate;
+        this.addrMode = addrMode;
+        this.cycles = cycles;
+    }
 }
+
