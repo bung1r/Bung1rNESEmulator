@@ -723,7 +723,7 @@ public class CPU
 
 
     // The Clock
-    void clock()
+    public void clock()
     {
         // once the cycles reaches 0, do the whole process
         if (cycles == 0)
