@@ -1,6 +1,7 @@
 using System.Buffers;
 using System.ComponentModel;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Threading.Tasks.Dataflow;
 
     
@@ -242,6 +243,7 @@ public class CPU
     // all 56 operates in alphabetical order. yay!
     byte ADC()
     {
+        fetch();
         ushort temp = (ushort)(A + fetched + GetFlag(StatusFlag.C));
         SetFlag(StatusFlag.C, temp > 255);
         SetFlag(StatusFlag.Z, (temp & 0x00FF) == 0);
@@ -364,8 +366,9 @@ public class CPU
     } // branch on plus (negative clear)
     byte BRK()
     {
+        
         PC++; 
-
+        
         SetFlag(StatusFlag.I, true);
         Push((byte)((PC >> 8) & 0x00FF));
         Push((byte)(PC & 0x00FF));
@@ -452,9 +455,11 @@ public class CPU
     } // compare with Y
     byte DEC()
     {
-        A = (byte)(A - 1);
-        SetFlag(StatusFlag.N, (A & 0b10000000) != 0);
-        SetFlag(StatusFlag.Z, A == 0);
+        fetch();
+        byte value = (byte)(fetched - 1);
+        write(addrAbs, value);
+        SetFlag(StatusFlag.N, (value & 0b10000000) != 0);
+        SetFlag(StatusFlag.Z, value == 0);
         return 0;
     } // decrement
     byte DEX()
@@ -481,9 +486,11 @@ public class CPU
     } // exclusive or (with accumulator)
     byte INC()
     {
-        A = (byte)(A + 1);
-        SetFlag(StatusFlag.N, (A & 0b10000000) != 0);
-        SetFlag(StatusFlag.Z, A == 0);
+        fetch();
+        byte value = (byte)(fetched + 1);
+        write(addrAbs, value);
+        SetFlag(StatusFlag.N, (value & 0b10000000) != 0);
+        SetFlag(StatusFlag.Z, value == 0);
         return 0;
     } // increment
     byte INX()
@@ -511,6 +518,8 @@ public class CPU
 
         Push((byte)((PC >> 8) & 0x00FF));    
         Push((byte)((PC & 0x00FF)));
+
+        PC = addrAbs;
         return 0;
     } // jump subroutine
     byte LDA()
@@ -572,7 +581,7 @@ public class CPU
     } // push accumulator
     byte PHP()
     {
-        Push(SR);
+        Push((byte)(SR | 0b0011_0000));
         return 0;
     } // push processor status (SR)
     byte PLA()
@@ -584,7 +593,9 @@ public class CPU
     } // pull accumulator
     byte PLP()
     {
-        SR = Pull();
+        byte temp = Pull();
+        SR = (byte)(temp &= 0b1100_1111);
+        SetFlag(StatusFlag.U, true);
         return 0;
     } // pull processor status (SR)
     byte ROL()
@@ -626,7 +637,7 @@ public class CPU
         // SR &= (byte)~StatusFlag.B;
         // SR &=  (byte)~StatusFlag.U;
         SetFlag(StatusFlag.B, false);
-        SetFlag(StatusFlag.U, false);
+        SetFlag(StatusFlag.U, true);
 
         PC = Pull();
         PC |= (ushort)(Pull() << 8);
@@ -723,22 +734,25 @@ public class CPU
 
 
     // The Clock
+    private int totalCycles;
     public void clock()
     {
         // once the cycles reaches 0, do the whole process
         if (cycles == 0)
         {
+            
+
             opcode = read(PC);
+            LogTest();
             PC++; // progress the program counter always
-
             cycles = instructions[opcode].cycles;
-
+           
             byte addCycleAddr = instructions[opcode].addrMode();
             byte addCycleOp = instructions[opcode].operate();
 
             if (addCycleAddr + addCycleOp > 1) cycles++; // if both the address mode and the operate function add a cycle, then add one more cycle.
         }
-
+        totalCycles++;
         cycles--; // decrement the cycles.
     } // one clock cycle 
 
@@ -779,14 +793,18 @@ public class CPU
             cycles = 7;
         }
     } // maskable, only happens if the I flag is clear. 
-    void RES(){
+    public void RES(){
+
         A = 0;
         X = 0;
         Y = 0;
         SP = 0xFD;
-        addrAbs = 0xFFFC;
-        ushort low = (ushort)read(addrAbs);
-        ushort high = (ushort)read((ushort)(addrAbs + (ushort)1));
+        PC = 0xC000;
+        SetFlag(StatusFlag.U, true);
+        SetFlag(StatusFlag.I, true);
+        
+        ushort low = (ushort)read(0xFFFC);
+        ushort high = (ushort)read(0xFFFD);
         
         addrRel = 0x0000;
         addrAbs = 0x0000;
@@ -803,6 +821,13 @@ public class CPU
         }
         return fetched;
     }
+    private void LogTest()
+    {
+
+        string line = $"{PC:X4} {opcode:X2} {instructions[opcode].name} {fetched:X2}         A:{A:X2} X:{X:X2} Y:{Y:X2} P:{SR:X2} SP:{SP:X2} CYC:{totalCycles}\n";
+
+        File.AppendAllText("nestest_output.log", line.ToString());
+    }
     byte fetched = 0x00; 
     ushort addrAbs = 0x0000;
     ushort addrRel = 0x00;
@@ -811,6 +836,7 @@ public class CPU
     
 }
 
+    
 // each enum represents a different bit in the status register, 8 because it is a byte!
 public enum StatusFlag
 {

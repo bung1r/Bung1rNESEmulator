@@ -1,4 +1,5 @@
 using System.Net.Mail;
+using System.Security.Cryptography;
 
 public class PPU
 {
@@ -59,7 +60,7 @@ public class PPU
         byte data = 0x00;
         address &= 0x3FFF; // basically limit the range to an actually valid one
 
-        if (address >= 0x0000 && address <= 0x1FFF) // Pattern Tables
+        if (address >= 0x0000 && address <= 0x1FFF) // Pattern Tables on the Cartridge
         {
             
         } else if (address >= 0x2000 && address <= 0x3EFF) // Nametables
@@ -117,6 +118,8 @@ public class PPU
     {
         // do something for the PPU clock
     }
+    private int cycle = 0;
+    private int scanline = 0;
     public PPU()
     {
         

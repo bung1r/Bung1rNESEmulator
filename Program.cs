@@ -3,6 +3,16 @@ class Program
 {
     static void Main()
     {
-        Bus bus = new Bus();
+        Bus nes = new Bus();
+
+        Cartridge cartridge = new Cartridge("nestest.nes");
+        nes.InsertCartridge(cartridge);
+
+        nes.reset();
+
+        while (true)
+        {
+            nes.clock();
+        }
     }
 }

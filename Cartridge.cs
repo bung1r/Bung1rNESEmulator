@@ -38,40 +38,88 @@ public class Cartridge
             this.tvSys2 = header[10];
         }
     } 
+    private Mapper mapper;
     private ROMHeader romHeader;
-    private byte[] vPRGMemory;
-    private byte[] vCHRMemory; 
-    private byte[] vRAM; // there is usually 8kb of extra RAM for the CPU to use. 
+    private ushort mapperID;
+    private byte scrolling; // 0 for horizontal, 1 for vertical
+    private byte[] vPRGMemory = [];
+    private byte[] vCHRMemory = []; 
+    private byte[] vRAM = []; // there is usually 8kb of extra RAM for the CPU to use. 
 
-    byte MapperID = 0;
     byte PRGBanks;
     byte CHRBanks;
 
     // is the cpu/ppu interested in reading? Apparentally cartridge gets first serve!
-    public bool cpuRead()
+    public byte cpuRead(ushort address)
     {
-        return false;
+        ushort mappedAddress = mapper.cpuMapRead(address);
+        return vPRGMemory[mappedAddress];
     }
-    public bool cpuWrite()
+    public void cpuWrite(ushort address, byte data)
     {
-        return false;
+        ushort mappedAddress = mapper.cpuMapWrite(address);
+        vPRGMemory[mappedAddress] = data;
     }
-    public bool ppuRead()
+    public byte ppuRead(ushort address)
     {
-        return false;
+        ushort mappedAddress = mapper.ppuMapRead(address);
+        return vCHRMemory[mappedAddress];
     }
-    public bool ppuWrite()
+    
+    public void ppuWrite(ushort address, byte data)
     {
-        return false;
+        ushort mappedAddress = mapper.ppuMapWrite(address);
+        vCHRMemory[mappedAddress] = data;
     }
     
     
     public Cartridge(string fileName)
     {
         byte[] file = File.ReadAllBytes(fileName);
-        // look at this sheer efficiency, it's INCREDIBLE. 
+        int offset = 0;
+
         byte[] header = file.Take(16).ToArray(); // take only the first 16 bytes for the header
+        offset += 16;
         romHeader = new ROMHeader(header);
 
+        if ((romHeader.romCrtl1 & 0x0004) != 0) offset += 512; // trainer exists
+        mapperID = (ushort)(((romHeader.romCrtl2 >> 4) << 4) | (romHeader.romCrtl1 >> 4));
+        scrolling = (byte)(romHeader.romCrtl1 & 0x01);
+
+        byte fileType = 1;
+
+        if (fileType == 0)
+        {
+
+        } else if (fileType == 1)
+        {
+            PRGBanks = romHeader.prgRomSize;
+            vPRGMemory = file[offset..(offset + PRGBanks * 16384)];
+            offset += PRGBanks * 16384;
+            
+            if (CHRBanks == 0)
+            {
+                vCHRMemory = new byte[8192];
+            } else {
+                CHRBanks = romHeader.chrRomSize;
+                vCHRMemory = file[offset..(offset + CHRBanks * 8192)];
+                offset += CHRBanks * 8192;
+            }
+            
+        } else if (fileType == 2)
+        {
+            
+        } else
+        {
+            // not implemented, just for now. 
+        }
+
+        // switch case for mappers or something
+        switch(mapperID)
+        {
+            case 0:
+                mapper = new Mapper000(PRGBanks, CHRBanks);
+                break;
+        }
     }
 }

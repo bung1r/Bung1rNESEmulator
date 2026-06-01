@@ -1,8 +1,9 @@
 public abstract class Mapper
 {
-    public virtual void cpuMapRead(ushort address, int mappedAddress){}
-    public virtual void cpuMapWrite(ushort address, int mappedAddress){}
-    public virtual void ppuMapRead(ushort address, int mappedAddress){}
+    public virtual ushort cpuMapRead(ushort address){return 0;}
+    public virtual ushort cpuMapWrite(ushort address){return 0;}
+    public virtual ushort ppuMapRead(ushort address){return 0;}
+    public virtual ushort ppuMapWrite(ushort address){return 0;}
     public byte prgBanks; 
     public byte chrBanks;
     public Mapper(byte prgBanks, byte chrBanks)

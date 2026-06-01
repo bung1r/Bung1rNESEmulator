@@ -7,7 +7,6 @@ using System.Security.Cryptography;
 public class Bus
 {
     public Cartridge cartridge;
-    public Mapper mapper;
     public CPU cpu; 
     public PPU ppu;
     public byte[] ram = new byte[2048]; // 2KB of memory, real RAM for now!. 
@@ -28,7 +27,10 @@ public class Bus
         else if (address >= 0x4020 && address <= 0xFFFF)
         {
             // do something with the cartridge
-
+            if (address >= 0x8000 && address <= 0xFFFF)
+            {
+                return cartridge.cpuRead(address);
+            }
         }
         return data; // fallback in case of an invalid address
     }
@@ -43,11 +45,15 @@ public class Bus
             // real range is only 2000 -> 2007, anything else in this range repeats 
             // 0010 0000 0000 0000 -> 0010 0000 0000 0111 (only last 3 numbers matter then)
             ushort mappedAddress = (ushort)(address & 0x0007);
-            ppu.cpuWrite(mappedAddress, data);
+            ram[mappedAddress] = data;
         }
         else if (address >= 0x4020 && address <= 0xFFFF)
         {
-            // do something with the 
+            // Cartridge stuff
+            if (address >= 0x8000) // the PRG-ROM of the Catridge
+            {
+                cartridge.cpuWrite(address, data);
+            }
         }
     }
     public byte ppuRead(ushort address, bool bReadOnly = false)
@@ -66,13 +72,14 @@ public class Bus
             ram[address] = 0x00; // set all the values to 0 for clearing.
         }
     }
-    public void insertCartridge(Cartridge cartridge)
+    public void InsertCartridge(Cartridge cartridge)
     {
         this.cartridge = cartridge;
         ppu.connectCartToPPU(cartridge);
     }
     public void reset()
     {
+        cpu.RES();
         clockCounter = 0;
     }
     public void clock()
@@ -87,9 +94,7 @@ public class Bus
         cpu = new CPU();
         ppu = new PPU();
         cpu.ConnectBus(this);
-        cartridge = new Cartridge("nestest.nes");
         ClearRAM();
-        
     }
 }
 
