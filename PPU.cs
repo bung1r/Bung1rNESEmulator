@@ -19,8 +19,7 @@ public class PPU
     public byte[] paletteRAM = new byte[32]; // 4 bg and 4 sprite palettes at once, baby!!
     // public Pixel[,] screen = new Pixel[256, 240]; // represents the screen, obviously. 
     public Pixel[] palScreen = new Pixel[100]; // for the 54 unique colors!
-    public Pixel[,] displayScreen = new Pixel[400,400];
-    public Pixel[,] workingScreen = new Pixel[400,400]; // the screen that will be sent over to be displayed.
+    public Pixel[,] displayScreen = new Pixel[256,240];
     public bool frameComplete = false;
     
     private struct ppuDebugStruct {
@@ -559,16 +558,7 @@ public class PPU
 
         if (GetPPURegister(PPUMASK.RenderBG))
         {
-            // Handle Pixel Selection by selecting the relevant bit
-            // depending upon fine x scolling. This has the effect of
-            // offsetting ALL background rendering by a set number
-            // of pixels, permitting smooth scrolling
-            // File.AppendAllText("log.txt", $"{fineX} {(0x8000 >> fineX):X4}\n");
-            // ushort bitMux = (ushort)(0x8000 >> fineX);
 
-            // bgPixel++;
-            // bgPalette++;
-            // int e = (0x8000 >> fineX);
             ushort bit_mux = (ushort)(0x8000 >> fineX);
 
             // Select Plane pixels by extracting from the shifter 
@@ -585,7 +575,10 @@ public class PPU
             bgPalette = (byte)((bg_pal1 << 1) | bg_pal0);
         }
 
-        displayScreen[cycle, scanline + 1] = GetColorFromPalette(bgPalette, bgPixel);
+        if (cycle - 1 >= 0 && cycle - 1 <= 255 && scanline >= 0 && scanline <= 239)
+        {
+            displayScreen[cycle - 1, scanline] = GetColorFromPalette(bgPalette, bgPixel);
+        }
 
         cycle++;
         if (cycle >= 341)
@@ -605,7 +598,7 @@ public class PPU
 
     public PPU()
     { // all possible colors that the NES can display apparentally. 
-//------BACKGROUND COLORS--------------------------
+
         palScreen[0x00] = new Pixel(84, 84, 84); // just for now
         palScreen[0x01] = new Pixel(0, 30, 116);
         palScreen[0x02] = new Pixel(8, 16, 144);
@@ -625,7 +618,7 @@ public class PPU
         palScreen[0x0D] = new Pixel(0, 0, 0);
         palScreen[0x0E] = new Pixel(0, 0, 0);
         palScreen[0x0F] = new Pixel(0, 0, 0);
-//------SPRITE COLORS-----------------------------
+
         palScreen[0x10] = new Pixel(152, 150, 152);
         palScreen[0x11] = new Pixel(8, 76, 196);
         palScreen[0x12] = new Pixel(48, 50, 236);

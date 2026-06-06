@@ -22,7 +22,7 @@ class Program
 
         Bus nes = new Bus();
 
-        Cartridge cartridge = new Cartridge("tests/nestest.nes");
+        Cartridge cartridge = new Cartridge("tests/test.nes");
         nes.InsertCartridge(cartridge);
 
 
@@ -72,12 +72,21 @@ public class MainForm : Form
     Panel paletteColor3 = new Panel();
     Panel paletteColor4 = new Panel();
     Stopwatch stopwatch = Stopwatch.StartNew();
+
+    private string iconName = "bung1rIcon.ico";
+    private string fullPath;
     private const int targetFPS = 60;
     private long targetTicksPerFrame = Stopwatch.Frequency / targetFPS;
     public MainForm(Pixel[,] pixels, Bus nes)
     {
         ClientSize = new Size(512, 512);
         DoubleBuffered = true;
+        Text = "Bung1r's NES Emulator";
+        fullPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, iconName);
+        if (System.IO.File.Exists(fullPath)) this.Icon = new System.Drawing.Icon(fullPath);
+
+
+
         screen = PixelsToBitmap(pixels);
         this.nes = nes;
 
@@ -85,20 +94,18 @@ public class MainForm : Form
         button.Text = "Switch Palettes";
         button.Name = "Palette Switcher";
         button.Size = new Size(100,40);
-        button.Location = new Point(300,50);
+        button.Location = new Point(590,50);
         button.Click += new EventHandler(SwitchPalette);
         this.Controls.Add(button);
 
-        paletteColor1.Location = new Point(350,100);
+        paletteColor1.Location = new Point(550,100);
         paletteColor1.Size = new Size(30,30);
-        paletteColor2.Location = new Point(380,100);
+        paletteColor2.Location = new Point(580,100);
         paletteColor2.Size = new Size(30,30);
-        paletteColor3.Location = new Point(410,100);
+        paletteColor3.Location = new Point(610,100);
         paletteColor3.Size = new Size(30,30);
-        paletteColor4.Location = new Point(440,100);
+        paletteColor4.Location = new Point(640,100);
         paletteColor4.Size = new Size(30,30);
-
-
 
         Pixel color1 = nes.ppu.GetColorFromPalette((byte)0, 0);
         paletteColor1.BackColor = Color.FromArgb(color1.R, color1.G, color1.B);
@@ -207,7 +214,7 @@ public class MainForm : Form
             screen,
             0,
             0,
-            width,
-            height);
+            width * 2,
+            height * 2);
     }
 }

@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Bung1rNESEmulator")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+ab4fb0206df90639d762818585851d08a9f3f300")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+6be9c5df98ee8f747bcb72ced6d45a8c0522f695")]
 [assembly: System.Reflection.AssemblyProductAttribute("Bung1rNESEmulator")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Bung1rNESEmulator")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
