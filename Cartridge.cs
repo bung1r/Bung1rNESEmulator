@@ -1,4 +1,6 @@
+using System.IO;
 using System.Runtime.CompilerServices;
+using Microsoft.VisualBasic;
 
 public class Cartridge
 {
@@ -41,35 +43,61 @@ public class Cartridge
     private Mapper mapper;
     private ROMHeader romHeader;
     private ushort mapperID;
-    private byte scrolling; // 0 for horizontal, 1 for vertical
+    public byte scrolling; // 0 for horizontal, 1 for vertical
     private byte[] vPRGMemory = [];
     private byte[] vCHRMemory = []; 
     private byte[] vRAM = []; // there is usually 8kb of extra RAM for the CPU to use. 
 
-    byte PRGBanks;
-    byte CHRBanks;
+    byte PRGBanks = 0;
+    byte CHRBanks = 0;
 
     // is the cpu/ppu interested in reading? Apparentally cartridge gets first serve!
-    public byte cpuRead(ushort address)
+    public bool cpuRead(ushort address, out byte data)
     {
-        ushort mappedAddress = mapper.cpuMapRead(address);
-        return vPRGMemory[mappedAddress];
+        uint mapped;
+        if (mapper.cpuMapRead(address, out mapped))
+        {
+            data = vPRGMemory[mapped];
+            return true;
+        }
+
+        data = 0;
+        return false;
     }
-    public void cpuWrite(ushort address, byte data)
+    public bool cpuWrite(ushort address, byte data)
     {
-        ushort mappedAddress = mapper.cpuMapWrite(address);
-        vPRGMemory[mappedAddress] = data;
+        uint mapped;
+        if (mapper.cpuMapRead(address, out mapped))
+        {
+            vPRGMemory[mapped] = data;
+            return true;
+        }
+
+        return false;
     }
-    public byte ppuRead(ushort address)
+    public bool ppuRead(ushort address, out byte data)
     {
-        ushort mappedAddress = mapper.ppuMapRead(address);
-        return vCHRMemory[mappedAddress];
+        uint mapped;
+        if (mapper.ppuMapRead(address, out mapped))
+        {
+            data = vCHRMemory[mapped];
+            return true;
+        }
+
+        data = 0;
+        return false;
     }
     
-    public void ppuWrite(ushort address, byte data)
+    public bool ppuWrite(ushort address, byte data)
     {
-        ushort mappedAddress = mapper.ppuMapWrite(address);
-        vCHRMemory[mappedAddress] = data;
+        uint mapped;
+        if (mapper.ppuMapWrite(address, out mapped))
+        {
+            vCHRMemory[mapped] = data;
+            return true;
+        }
+        return false;
+        
     }
     
     
@@ -94,14 +122,15 @@ public class Cartridge
         } else if (fileType == 1)
         {
             PRGBanks = romHeader.prgRomSize;
+            CHRBanks = romHeader.chrRomSize;
             vPRGMemory = file[offset..(offset + PRGBanks * 16384)];
             offset += PRGBanks * 16384;
-            
+
+
             if (CHRBanks == 0)
             {
                 vCHRMemory = new byte[8192];
             } else {
-                CHRBanks = romHeader.chrRomSize;
                 vCHRMemory = file[offset..(offset + CHRBanks * 8192)];
                 offset += CHRBanks * 8192;
             }

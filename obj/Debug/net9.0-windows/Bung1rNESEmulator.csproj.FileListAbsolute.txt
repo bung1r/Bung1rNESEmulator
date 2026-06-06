@@ -1,0 +1,15 @@
+C:\Users\lamtr\Bung1rNESEmulator\bin\Debug\net9.0-windows\Bung1rNESEmulator.exe
+C:\Users\lamtr\Bung1rNESEmulator\bin\Debug\net9.0-windows\Bung1rNESEmulator.deps.json
+C:\Users\lamtr\Bung1rNESEmulator\bin\Debug\net9.0-windows\Bung1rNESEmulator.runtimeconfig.json
+C:\Users\lamtr\Bung1rNESEmulator\bin\Debug\net9.0-windows\Bung1rNESEmulator.dll
+C:\Users\lamtr\Bung1rNESEmulator\bin\Debug\net9.0-windows\Bung1rNESEmulator.pdb
+C:\Users\lamtr\Bung1rNESEmulator\obj\Debug\net9.0-windows\Bung1rNESEmulator.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\lamtr\Bung1rNESEmulator\obj\Debug\net9.0-windows\Bung1rNESEmulator.AssemblyInfoInputs.cache
+C:\Users\lamtr\Bung1rNESEmulator\obj\Debug\net9.0-windows\Bung1rNESEmulator.AssemblyInfo.cs
+C:\Users\lamtr\Bung1rNESEmulator\obj\Debug\net9.0-windows\Bung1rNESEmulator.csproj.CoreCompileInputs.cache
+C:\Users\lamtr\Bung1rNESEmulator\obj\Debug\net9.0-windows\Bung1rNESEmulator.sourcelink.json
+C:\Users\lamtr\Bung1rNESEmulator\obj\Debug\net9.0-windows\Bung1rNESEmulator.dll
+C:\Users\lamtr\Bung1rNESEmulator\obj\Debug\net9.0-windows\refint\Bung1rNESEmulator.dll
+C:\Users\lamtr\Bung1rNESEmulator\obj\Debug\net9.0-windows\Bung1rNESEmulator.pdb
+C:\Users\lamtr\Bung1rNESEmulator\obj\Debug\net9.0-windows\Bung1rNESEmulator.genruntimeconfig.cache
+C:\Users\lamtr\Bung1rNESEmulator\obj\Debug\net9.0-windows\ref\Bung1rNESEmulator.dll

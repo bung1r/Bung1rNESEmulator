@@ -5,42 +5,48 @@ public class Mapper000 : Mapper
     {
         
     }
-    public override ushort cpuMapWrite(ushort address)
+    public override bool cpuMapWrite(ushort address, out uint mapped)
     {
-        ushort mappedAddress = address;
+        mapped = address;
         if (address >= 0x8000 && address <= 0xFFFF)
         {
-            mappedAddress = (ushort)(address & (prgBanks> 1 ? 0x7FFF : 0x3FFF));
-            return mappedAddress;
+            mapped = (ushort)(address & (prgBanks > 1 ? 0x7FFF : 0x3FFF));
+            return true;
         }
-        return mappedAddress;
+        return false;
     }
-    public override ushort cpuMapRead(ushort address)
+    public override bool cpuMapRead(ushort address, out uint mapped)
     {
-        ushort mappedAddress = address;
+        mapped = address;
         if (address >= 0x8000 && address <= 0xFFFF)
         {
-            mappedAddress = (ushort)(address & (prgBanks> 1 ? 0x7FFF : 0x3FFF));
-            return mappedAddress;
+            mapped = (ushort)(address & (prgBanks > 1 ? 0x7FFF : 0x3FFF));
+            return true;
         }
-        return mappedAddress;
+        return false;
     }
-    public override ushort ppuMapWrite(ushort address)
+    public override bool ppuMapWrite(ushort address, out uint mapped)
     {
-        ushort mappedAddress = address;
+        mapped = address;
         if (address >= 0x0000 && address <= 0x1FFF)
         {
-            return mappedAddress;
+            if (chrBanks == 0)
+            {
+                mapped = address;
+                return true;
+            }
         }
-        return 0;
+
+        return false;
     }
-    public override ushort ppuMapRead(ushort address)
+    public override bool ppuMapRead(ushort address, out uint mapped)
     {
-        ushort mappedAddress = address;
-        if (address >= 0x0000 && address <= 0x1FFF)
+        mapped = address;
+        if ((address >= 0x0000 && address <= 0x1FFF))
         {
-            return mappedAddress;
-        }
-        return 0;
+            mapped = address;
+            return true;
+        } 
+        return false;
     }
  }

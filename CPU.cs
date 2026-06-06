@@ -1,5 +1,8 @@
 using System.Buffers;
+using System.CodeDom.Compiler;
 using System.ComponentModel;
+using System.Globalization;
+using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks.Dataflow;
@@ -194,17 +197,28 @@ public class CPU
         byte low = read(ptr);
         byte high = read((byte)(ptr + 1));
         addrAbs = (ushort)(high << 8 | low);
+
+
         return 0;
     } 
     byte inY()
     {
         byte zpAddr = read(PC);
         PC++;
-        byte ptr = (byte)(zpAddr);
 
-        ushort baseAddr = (ushort)(read(ptr) | (read((byte)(ptr + 1)) << 8));
-        addrAbs = (ushort)(baseAddr + Y);
-        return 0;
+        ushort low = read((ushort)(zpAddr & 0x00FF));
+        ushort high = read((ushort)((zpAddr + 1) & 0x00FF));
+
+        addrAbs = (ushort)((high << 8) | low);
+        addrAbs += Y;
+
+        if ((addrAbs & 0xFF00) != (high << 8))
+        {
+            return 1;
+        } else
+        {
+            return 0;
+        }
     } 
     byte rel()
     {
@@ -285,7 +299,7 @@ public class CPU
             cycles++;
             addrAbs = (ushort)(PC + addrRel);
 
-            if ((addrAbs & 0b11110000) != (PC & 0b11110000)) cycles++; // checks if different page
+            if ((addrAbs & 0xFF00) != (PC & 0xFF00)) cycles++; // checks if different page
             
             PC = addrAbs;
         }
@@ -298,7 +312,7 @@ public class CPU
             cycles++;
             addrAbs = (ushort)(PC + addrRel);
 
-            if ((addrAbs & 0b11110000) != (PC & 0b11110000)) cycles++; // checks if different page
+            if ((addrAbs & 0xFF00) != (PC & 0xFF00)) cycles++; // checks if different page
             
             PC = addrAbs;
         }
@@ -311,7 +325,7 @@ public class CPU
             cycles++;
             addrAbs = (ushort)(PC + addrRel);
 
-            if ((addrAbs & 0b11110000) != (PC & 0b11110000)) cycles++; // checks if different page
+            if ((addrAbs & 0xFF00) != (PC & 0xFF00)) cycles++; // checks if different page
             
             PC = addrAbs;
         }
@@ -320,9 +334,10 @@ public class CPU
     byte BIT()
     {
         fetch();
+        ushort temp = (ushort)(A & fetched);
         SetFlag(StatusFlag.V, (fetched & 0b01000000) != 0);
         SetFlag(StatusFlag.N, (fetched & 0b10000000) != 0);
-        SetFlag(StatusFlag.Z, (fetched & A) == 0);
+        SetFlag(StatusFlag.Z, (temp & 0x00FF) == 0);
         return 0;
     } // bit test
     byte BMI()
@@ -332,7 +347,7 @@ public class CPU
             cycles++;
             addrAbs = (ushort)(PC + addrRel);
 
-            if ((addrAbs & 0b11110000) != (PC & 0b11110000)) cycles++; // checks if different page
+            if ((addrAbs & 0xFF00) != (PC & 0xFF00)) cycles++; // checks if different page
             
             PC = addrAbs;
         }
@@ -345,7 +360,7 @@ public class CPU
             cycles++;
             addrAbs = (ushort)(PC + addrRel);
 
-            if ((addrAbs & 0b11110000) != (PC & 0b11110000)) cycles++; // checks if different page
+            if ((addrAbs & 0xFF00) != (PC & 0xFF00)) cycles++; // checks if different page
             
             PC = addrAbs;
         }
@@ -358,7 +373,7 @@ public class CPU
             cycles++;
             addrAbs = (ushort)(PC + addrRel);
 
-            if ((addrAbs & 0b11110000) != (PC & 0b11110000)) cycles++; // checks if different page
+            if ((addrAbs & 0xFF00) != (PC & 0xFF00)) cycles++; // checks if different page
             
             PC = addrAbs;
         }
@@ -390,7 +405,7 @@ public class CPU
             cycles++;
             addrAbs = (ushort)(PC + addrRel);
 
-            if ((addrAbs & 0b11110000) != (PC & 0b11110000)) cycles++; // checks if different page
+            if ((addrAbs & 0xFF00) != (PC & 0xFF00)) cycles++; // checks if different page
             
             PC = addrAbs;
         }
@@ -403,7 +418,7 @@ public class CPU
             cycles++;
             addrAbs = (ushort)(PC + addrRel);
 
-            if ((addrAbs & 0b11110000) != (PC & 0b11110000)) cycles++; // checks if different page
+            if ((addrAbs & 0xFF00) != (PC & 0xFF00)) cycles++; // checks if different page
             
             PC = addrAbs;
         }
@@ -528,7 +543,7 @@ public class CPU
         A = fetched;
         SetFlag(StatusFlag.N, (A & 0b10000000) != 0);
         SetFlag(StatusFlag.Z, A == 0);
-        return 0;
+        return 1;
     } // load accumulator
     byte LDX()
     {
@@ -544,7 +559,7 @@ public class CPU
         Y = fetched;
         SetFlag(StatusFlag.N, (Y & 0b10000000) != 0);
         SetFlag(StatusFlag.Z, Y == 0);
-        return 0;
+        return 1;
     } // load Y
     byte LSR()
     {
@@ -743,7 +758,7 @@ public class CPU
             
 
             opcode = read(PC);
-            LogTest();
+            // LogTest(); // HELL YES I PASSED THIS TEST!!!!! HELL YES!!
             PC++; // progress the program counter always
             cycles = instructions[opcode].cycles;
            
@@ -757,7 +772,7 @@ public class CPU
     } // one clock cycle 
 
     // Interrupts
-    void NMI()
+    public void NMI()
     {
         Push((byte)((PC >> 8) & (0x00FF)));
         Push((byte)(PC & 0x00FF));
@@ -767,7 +782,7 @@ public class CPU
         SetFlag(StatusFlag.I, true);
         Push(GetStatus());
 
-        addrAbs = 0xFFFE;
+        addrAbs = 0xFFFA;
         ushort low = read(addrAbs);
         ushort high = read((ushort)(addrAbs + 1));
         PC = (ushort)((high << 8) | low);
@@ -799,18 +814,23 @@ public class CPU
         X = 0;
         Y = 0;
         SP = 0xFD;
-        PC = 0xC000;
+    
         SetFlag(StatusFlag.U, true);
         SetFlag(StatusFlag.I, true);
         
-        ushort low = (ushort)read(0xFFFC);
-        ushort high = (ushort)read(0xFFFD);
+        ushort low = read(0xFFFC);
+        ushort high = read(0xFFFD);
+
+        PC = (ushort)((low | (high << 8)));
         
+        // PC = low;
+        // PC = 0xC000;
+
         addrRel = 0x0000;
         addrAbs = 0x0000;
         fetched = 0x00;
 
-        cycles = 8; // arbitrary number I suppose, resets take time
+        cycles = 7; // arbitrary number I suppose, resets take time
     } // reset
 
     byte fetch()

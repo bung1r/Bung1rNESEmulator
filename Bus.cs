@@ -24,13 +24,14 @@ public class Bus
             ushort mappedAddress = (ushort)(address & 0x0007);
             data = ppu.cpuRead(mappedAddress, bReadOnly);
         }
-        else if (address >= 0x4020 && address <= 0xFFFF)
+        else if (cartridge.cpuRead(address, out data))
         {
+            return data;
             // do something with the cartridge
-            if (address >= 0x8000 && address <= 0xFFFF)
-            {
-                return cartridge.cpuRead(address);
-            }
+            // if (address >= 0x8000 && address <= 0xFFFF)
+            // {
+            //     return cartridge.cpuRead(address);
+            // }
         }
         return data; // fallback in case of an invalid address
     }
@@ -45,7 +46,7 @@ public class Bus
             // real range is only 2000 -> 2007, anything else in this range repeats 
             // 0010 0000 0000 0000 -> 0010 0000 0000 0111 (only last 3 numbers matter then)
             ushort mappedAddress = (ushort)(address & 0x0007);
-            ram[mappedAddress] = data;
+            ppu.cpuWrite(mappedAddress, data);
         }
         else if (address >= 0x4020 && address <= 0xFFFF)
         {
@@ -80,6 +81,7 @@ public class Bus
     public void reset()
     {
         cpu.RES();
+        ppu.reset();
         clockCounter = 0;
     }
     public void clock()
@@ -87,6 +89,11 @@ public class Bus
         clockCounter++;
         ppu.clock();
         if (clockCounter % 3 == 0) cpu.clock();
+        if (ppu.nmiTriggered && !ppu.ranNMI)
+        {
+            cpu.NMI();
+            ppu.ranNMI = true;
+        }
     }
 
     public Bus()
