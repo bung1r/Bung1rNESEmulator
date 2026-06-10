@@ -1,0 +1,2 @@
+C:\Users\lamtr\Bung1rNESEmulator\bin\Release\net9.0-windows\win-x64\publish\Bung1rNESEmulator.pdb
+C:\Users\lamtr\Bung1rNESEmulator\bin\Release\net9.0-windows\win-x64\publish\Bung1rNESEmulator.exe
